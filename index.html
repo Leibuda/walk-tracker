@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Walk Tracker">
+<title>Walk Tracker</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  :root{
+    --teal:#1D9E75;--teal-light:#E1F5EE;--teal-dark:#0F6E56;
+    --text:#1a1a1a;--text2:#555;--text3:#888;
+    --bg:#fff;--bg2:#f5f5f5;--bg3:#fafafa;
+    --border:#e0e0e0;--radius:12px;--radius-sm:8px;
+  }
+  @media(prefers-color-scheme:dark){
+    :root{
+      --text:#f0f0f0;--text2:#aaa;--text3:#666;
+      --bg:#1c1c1e;--bg2:#2c2c2e;--bg3:#3a3a3c;
+      --border:#3a3a3c;--teal-light:#0a3d2a;--teal-dark:#5fcfa8;
+    }
+  }
+  html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overflow:hidden}
+  #app{height:100%;display:flex;flex-direction:column;max-width:430px;margin:0 auto}
+  .screen{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 16px env(safe-area-inset-bottom,16px)}
+
+  .btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:15px;border-radius:var(--radius);border:none;font-size:16px;font-weight:500;cursor:pointer;transition:opacity .15s}
+  .btn:active{opacity:.8}
+  .btn-primary{background:var(--teal);color:#fff}
+  .btn-secondary{background:var(--bg2);color:var(--text);border:1px solid var(--border)}
+  .btn-outline{background:var(--teal-light);color:var(--teal-dark);border:1px solid var(--teal)}
+  .btn-sm{padding:8px 16px;width:auto;font-size:14px;border-radius:var(--radius-sm)}
+
+  .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+  .stat-card{background:var(--bg2);border-radius:var(--radius-sm);padding:12px 14px}
+  .stat-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+  .stat-value{font-size:22px;font-weight:500;font-variant-numeric:tabular-nums;color:var(--text)}
+  .stat-sub{font-size:11px;color:var(--text2);margin-top:2px}
+
+  #map-container{width:100%;height:280px;border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);background:#e8f0e8;position:relative}
+  #map-container canvas{border-radius:var(--radius)}
+  .map-placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text3);font-size:13px;gap:8px}
+  .map-placeholder span{font-size:32px}
+
+  .walk-item{display:flex;align-items:center;justify-content:space-between;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;cursor:pointer;width:100%;text-align:left;transition:background .15s;margin-bottom:8px}
+  .walk-item:active{background:var(--bg2)}
+  .walk-avatar{width:42px;height:42px;border-radius:50%;background:var(--teal-light);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+  .walk-info{flex:1;margin-left:12px}
+  .walk-name{font-size:14px;font-weight:500;color:var(--text)}
+  .walk-meta{font-size:12px;color:var(--text2);margin-top:2px}
+  .walk-dist{font-size:15px;font-weight:500;color:var(--teal)}
+
+  .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+  .header-title{font-size:20px;font-weight:600}
+  .back-btn{background:none;border:none;cursor:pointer;font-size:22px;color:var(--text);padding:4px;line-height:1}
+
+  .hero-box{background:var(--teal-light);border-radius:var(--radius);padding:24px 20px;margin:12px 0 16px;text-align:center}
+  .hero-icon{font-size:36px;margin-bottom:8px}
+  .hero-title{font-size:15px;font-weight:600;color:var(--teal-dark);margin-bottom:4px}
+  .hero-sub{font-size:13px;color:var(--teal-dark);opacity:.8}
+
+  .status-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--teal);margin-right:6px;animation:pulse 1.5s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .timer{font-size:26px;font-weight:500;font-variant-numeric:tabular-nums}
+
+  .btn-row{display:flex;gap:10px;margin-top:4px}
+  .btn-row .btn{flex:1}
+
+  .error-box{background:#fff0ec;border:1px solid #f5c4b3;border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:#993c1d;margin-bottom:12px}
+  @media(prefers-color-scheme:dark){.error-box{background:#3d1a0e;border-color:#6b2a10;color:#f0997b}}
+
+  .section-title{font-size:13px;font-weight:500;color:var(--text2);margin:16px 0 8px;text-transform:uppercase;letter-spacing:.05em}
+  .totals-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px}
+
+  .install-banner{background:#fff8e1;border:1px solid #ffe082;border-radius:var(--radius-sm);padding:12px 14px;font-size:13px;color:#7a5800;margin-bottom:16px;line-height:1.5}
+  @media(prefers-color-scheme:dark){.install-banner{background:#2a1f00;border-color:#6b5000;color:#ffd54f}}
+  .install-banner b{display:block;margin-bottom:4px}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="screen-home" class="screen"></div>
+  <div id="screen-tracking" class="screen" style="display:none"></div>
+  <div id="screen-summary" class="screen" style="display:none"></div>
+  <div id="screen-history" class="screen" style="display:none"></div>
+  <div id="screen-detail" class="screen" style="display:none"></div>
+</div>
+
+<script>
+// ── Offline tile cache using Canvas ───────────────────────
+// We draw routes on a canvas with OpenStreetMap tiles loaded via Image()
+// Tiles are cached in IndexedDB so they work offline after first use.
+
+var DB, DB_NAME='wt_tiles', DB_VER=1, TILE_STORE='tiles';
+function openDB(cb){
+  if(DB)return cb(DB);
+  var req=indexedDB.open(DB_NAME,DB_VER);
+  req.onupgradeneeded=function(e){e.target.result.createObjectStore(TILE_STORE)};
+  req.onsuccess=function(e){DB=e.target.result;cb(DB)};
+  req.onerror=function(){cb(null)};
+}
+function getTile(key,cb){
+  openDB(function(db){
+    if(!db)return cb(null);
+    var tx=db.transaction(TILE_STORE,'readonly');
+    var req=tx.objectStore(TILE_STORE).get(key);
+    req.onsuccess=function(){cb(req.result||null)};
+    req.onerror=function(){cb(null)};
+  });
+}
+function putTile(key,val){
+  openDB(function(db){
+    if(!db)return;
+    var tx=db.transaction(TILE_STORE,'readwrite');
+    tx.objectStore(TILE_STORE).put(val,key);
+  });
+}
+
+function loadTileImage(z,x,y,cb){
+  var key=z+'/'+x+'/'+y;
+  getTile(key,function(cached){
+    if(cached){
+      var img=new Image();
+      img.onload=function(){cb(img)};
+      img.onerror=function(){cb(null)};
+      img.src=cached;
+      return;
+    }
+    var sub=['a','b','c'][Math.abs(x+y)%3];
+    var url='https://'+sub+'.tile.openstreetmap.org/'+z+'/'+x+'/'+y+'.png';
+    var img=new Image();
+    img.crossOrigin='anonymous';
+    img.onload=function(){
+      try{
+        var c=document.createElement('canvas');c.width=256;c.height=256;
+        var ctx=c.getContext('2d');ctx.drawImage(img,0,0);
+        var d=c.toDataURL('image/png');
+        putTile(key,d);
+      }catch(e){}
+      cb(img);
+    };
+    img.onerror=function(){cb(null)};
+    img.src=url;
+  });
+}
+
+// ── Map canvas renderer ───────────────────────────────────
+var maps={};
+function lat2tile(lat,z){return Math.floor((1-Math.log(Math.tan(lat*Math.PI/180)+1/Math.cos(lat*Math.PI/180))/Math.PI)/2*Math.pow(2,z))}
+function lon2tile(lon,z){return Math.floor((lon+180)/360*Math.pow(2,z))}
+function tile2lat(y,z){var n=Math.PI-2*Math.PI*y/Math.pow(2,z);return 180/Math.PI*Math.atan(0.5*(Math.exp(n)-Math.exp(-n)))}
+function tile2lon(x,z){return x/Math.pow(2,z)*360-180}
+
+function createMap(containerId){
+  var container=document.getElementById(containerId);
+  if(!container)return null;
+  container.innerHTML='';
+  var canvas=document.createElement('canvas');
+  var w=container.offsetWidth||320, h=container.offsetHeight||280;
+  canvas.width=w; canvas.height=h;
+  canvas.style.width='100%'; canvas.style.height='100%';
+  container.appendChild(canvas);
+  var m={canvas:canvas,ctx:canvas.getContext('2d'),w:w,h:h,
+    zoom:16,centerLat:41.563,centerLon:-87.538,
+    coords:[],loading:0,pendingRender:false};
+  maps[containerId]=m;
+
+  // pan support
+  var drag=null;
+  canvas.addEventListener('touchstart',function(e){
+    if(e.touches.length===1)drag={x:e.touches[0].clientX,y:e.touches[0].clientY,lat:m.centerLat,lon:m.centerLon};
+  },{passive:true});
+  canvas.addEventListener('touchmove',function(e){
+    if(!drag||e.touches.length!==1)return;
+    var dx=e.touches[0].clientX-drag.x, dy=e.touches[0].clientY-drag.y;
+    var scale=360/Math.pow(2,m.zoom)/256;
+    m.centerLon=drag.lon-dx*scale;
+    var mercY=Math.log(Math.tan((drag.lat*Math.PI/180))+1/Math.cos(drag.lat*Math.PI/180));
+    var newMercY=mercY+dy*(2*Math.PI/Math.pow(2,m.zoom)/256);
+    m.centerLat=Math.atan(Math.sinh(newMercY))*180/Math.PI;
+    renderMap(containerId);
+  },{passive:true});
+
+  return m;
+}
+
+// Convert lat/lon to pixel on the canvas given current map center/zoom
+function ll2px(lat,lon,m){
+  var z=m.zoom, N=Math.pow(2,z);
+  // center in fractional tile coords
+  var cTx=(m.centerLon+180)/360*N;
+  var cSin=Math.sin(m.centerLat*Math.PI/180);
+  var cTy=(1-Math.log((1+cSin)/(1-cSin))/(2*Math.PI))*N/2;
+  // point in fractional tile coords
+  var pTx=(lon+180)/360*N;
+  var pSin=Math.sin(lat*Math.PI/180);
+  var pTy=(1-Math.log((1+pSin)/(1-pSin))/(2*Math.PI))*N/2;
+  return{x:m.w/2+(pTx-cTx)*256, y:m.h/2+(pTy-cTy)*256};
+}
+
+function renderMap(id){
+  var m=maps[id]; if(!m)return;
+  var ctx=m.ctx, w=m.w, h=m.h, z=m.zoom;
+  var N=Math.pow(2,z);
+
+  // fractional tile index of map center
+  var cTx=(m.centerLon+180)/360*N;
+  var cSin=Math.sin(m.centerLat*Math.PI/180);
+  var cTy=(1-Math.log((1+cSin)/(1-cSin))/(2*Math.PI))*N/2;
+
+  // tile range to draw
+  var tileW=Math.ceil(w/256)+3, tileH=Math.ceil(h/256)+3;
+  var t0x=Math.floor(cTx-tileW/2), t0y=Math.floor(cTy-tileH/2);
+
+  // snapshot state so async callbacks stay consistent
+  var snapCoords=m.coords.slice();
+  var snapLive=m.livePos?{lat:m.livePos.lat,lng:m.livePos.lng}:null;
+
+  function drawOverlay(){
+    // route line
+    if(snapCoords.length>=2){
+      ctx.beginPath();ctx.strokeStyle='#1D9E75';ctx.lineWidth=4;ctx.lineJoin='round';ctx.lineCap='round';
+      snapCoords.forEach(function(c,i){
+        var p=ll2px(c.lat,c.lng,m);
+        if(i===0)ctx.moveTo(p.x,p.y); else ctx.lineTo(p.x,p.y);
+      });
+      ctx.stroke();
+    }
+    // green start dot
+    if(snapCoords.length>=1){
+      var p=ll2px(snapCoords[0].lat,snapCoords[0].lng,m);
+      ctx.beginPath();ctx.arc(p.x,p.y,8,0,2*Math.PI);
+      ctx.fillStyle='#1D9E75';ctx.fill();
+      ctx.strokeStyle='white';ctx.lineWidth=2.5;ctx.stroke();
+    }
+    // blue live position dot
+    if(snapLive){
+      var p=ll2px(snapLive.lat,snapLive.lng,m);
+      // accuracy halo
+      ctx.beginPath();ctx.arc(p.x,p.y,18,0,2*Math.PI);
+      ctx.fillStyle='rgba(55,138,221,0.15)';ctx.fill();
+      // dot
+      ctx.beginPath();ctx.arc(p.x,p.y,11,0,2*Math.PI);
+      ctx.fillStyle='#378ADD';ctx.fill();
+      ctx.strokeStyle='white';ctx.lineWidth=3;ctx.stroke();
+    }
+  }
+
+  // draw tiles then overlay
+  ctx.clearRect(0,0,w,h);
+  var total=tileW*tileH, done=0;
+  for(var tx=0;tx<tileW;tx++){
+    for(var ty=0;ty<tileH;ty++){
+      (function(tx,ty){
+        var txi=((t0x+tx)%N+N)%N, tyi=t0y+ty;
+        if(tyi<0||tyi>=N){done++;if(done===total)drawOverlay();return;}
+        var drawX=Math.round(w/2+(t0x+tx-cTx)*256);
+        var drawY=Math.round(h/2+(t0y+ty-cTy)*256);
+        loadTileImage(z,txi,tyi,function(img){
+          if(img)ctx.drawImage(img,drawX,drawY,256,256);
+          done++;
+          if(done===total)drawOverlay();
+        });
+      })(tx,ty);
+    }
+  }
+}
+
+function setMapView(id,lat,lon,zoom,coords){
+  var m=maps[id]; if(!m)return;
+  m.centerLat=lat; m.centerLon=lon;
+  if(zoom)m.zoom=zoom;
+  if(coords)m.coords=coords;
+  renderMap(id);
+}
+
+function fitBounds(id,coords){
+  if(!coords||coords.length===0)return;
+  var m=maps[id]; if(!m)return;
+  m.coords=coords;
+  if(coords.length===1){setMapView(id,coords[0].lat,coords[0].lng,17,coords);return;}
+  var minLat=coords[0].lat,maxLat=coords[0].lat,minLon=coords[0].lng,maxLon=coords[0].lng;
+  coords.forEach(function(c){
+    minLat=Math.min(minLat,c.lat);maxLat=Math.max(maxLat,c.lat);
+    minLon=Math.min(minLon,c.lng);maxLon=Math.max(maxLon,c.lng);
+  });
+  var cLat=(minLat+maxLat)/2, cLon=(minLon+maxLon)/2;
+  var dLat=maxLat-minLat||0.001, dLon=maxLon-minLon||0.001;
+  var z=Math.floor(Math.min(
+    Math.log2(m.h*0.7/256*(180/dLat)),
+    Math.log2(m.w*0.7/256*(360/dLon))
+  ));
+  m.centerLat=cLat; m.centerLon=cLon; m.zoom=Math.max(13,Math.min(18,z));
+  renderMap(id);
+}
+
+// ── Utilities ──────────────────────────────────────────────
+function fmtDur(s){
+  var h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;
+  if(h>0)return h+'h '+pad(m)+'m '+pad(sec)+'s';
+  if(m>0)return m+'m '+pad(sec)+'s';
+  return sec+'s';
+}
+function pad(n){return String(n).padStart(2,'0')}
+function fmtDist(m){
+  var ft=m*3.28084;
+  if(ft<1000)return Math.round(ft)+' ft';
+  return (ft/5280).toFixed(2)+' mi';
+}
+function fmtPace(mps){
+  if(mps<0.1)return '--:--';
+  var mpm=1609.34/(mps*60),mins=Math.floor(mpm),secs=Math.round((mpm-mins)*60);
+  return mins+':'+pad(secs);
+}
+function haversine(la1,lo1,la2,lo2){
+  var R=6371000,dLa=(la2-la1)*Math.PI/180,dLo=(lo2-lo1)*Math.PI/180;
+  var a=Math.sin(dLa/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dLo/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+// ── State ──────────────────────────────────────────────────
+var state={
+  walks:JSON.parse(localStorage.getItem('wt_walks')||'[]'),
+  coords:[],distance:0,elapsed:0,speed:0,
+  isTracking:false,isPaused:false,
+  watchId:null,timer:null,
+  startTime:null,pausedMs:0,pauseStart:null,
+  selectedWalk:null
+};
+function saveWalks(){localStorage.setItem('wt_walks',JSON.stringify(state.walks))}
+
+// ── GPS ────────────────────────────────────────────────────
+function startGPS(){
+  if(!navigator.geolocation)return showErr('Geolocation not supported on this device.');
+  state.watchId=navigator.geolocation.watchPosition(
+    function(pos){
+      var la=pos.coords.latitude,lo=pos.coords.longitude,acc=pos.coords.accuracy;
+      if(acc>60)return;
+      var nc={lat:la,lng:lo,ts:Date.now()};
+      var st=document.getElementById('status-text');
+      if(st)st.innerHTML='<span class="status-dot"></span> Recording';
+      var eb=document.getElementById('gps-error');
+      if(eb)eb.style.display='none';
+      // Always update live blue dot to exact current position
+      var mt=maps['map-tracking'];
+      if(mt){mt.livePos={lat:la,lng:lo};mt.centerLat=la;mt.centerLon=lo;mt.zoom=Math.max(mt.zoom,17);}
+      var nc={lat:la,lng:lo,ts:Date.now()};
+      if(state.coords.length>0){
+        var prev=state.coords[state.coords.length-1];
+        var d=haversine(prev.lat,prev.lng,la,lo);
+        if(d>=2){
+          var dt=(nc.ts-prev.ts)/1000;
+          state.speed=dt>0?d/dt:0;
+          state.distance+=d;
+          state.coords.push(nc);
+          updateTrackingStats();
+        }
+      } else {
+        state.coords.push(nc);
+        updateTrackingStats();
+      }
+      if(mt){mt.coords=state.coords;renderMap('map-tracking');}
+    },
+    function(err){showErr('GPS error: '+err.message)},
+    {enableHighAccuracy:true,maximumAge:5000,timeout:20000}
+  );
+}
+function stopGPS(){if(state.watchId){navigator.geolocation.clearWatch(state.watchId);state.watchId=null}}
+function startTimer(){
+  state.timer=setInterval(function(){
+    state.elapsed=Math.floor((Date.now()-state.startTime-state.pausedMs)/1000);
+    var el=document.getElementById('timer-display');
+    if(el)el.textContent=fmtDur(state.elapsed);
+  },1000);
+}
+function stopTimer(){clearInterval(state.timer);state.timer=null}
+function showErr(msg){var b=document.getElementById('gps-error');if(b){b.textContent=msg;b.style.display='block'}}
+function updateTrackingStats(){
+  var d=document.getElementById('stat-dist'); if(d)d.textContent=fmtDist(state.distance);
+  var p=document.getElementById('stat-pace'); if(p)p.textContent=fmtPace(state.speed);
+  var s=document.getElementById('stat-speed'); if(s)s.textContent=(state.speed*2.23694).toFixed(1)+' mph';
+  var st=document.getElementById('stat-steps'); if(st)st.textContent=Math.round(state.distance/0.78).toLocaleString();
+}
+
+// ── Screen helpers ─────────────────────────────────────────
+function show(name){
+  ['home','tracking','summary','history','detail'].forEach(function(s){
+    document.getElementById('screen-'+s).style.display=s===name?'':'none';
+  });
+}
+
+var isStandalone=window.navigator.standalone===true;
+
+function renderHome(){
+  var total=state.walks.reduce(function(s,w){return s+w.distance},0);
+  var totalT=state.walks.reduce(function(s,w){return s+w.duration},0);
+  var recent=state.walks.slice(0,3).map(function(w){
+    return '<button class="walk-item" onclick="openWalk(\''+w.id+'\')">'+
+      '<span class="walk-avatar">🚶</span>'+
+      '<span class="walk-info"><span class="walk-name">'+w.date+'</span><br><span class="walk-meta">'+w.time+' · '+fmtDur(w.duration)+'</span></span>'+
+      '<span class="walk-dist">'+fmtDist(w.distance)+'</span>'+
+    '</button>';
+  }).join('');
+  var totalsHTML=state.walks.length>0?
+    '<div class="totals-grid">'+
+      '<div class="stat-card"><div class="stat-label">Total distance</div><div class="stat-value" style="font-size:18px">'+fmtDist(total)+'</div></div>'+
+      '<div class="stat-card"><div class="stat-label">Total time</div><div class="stat-value" style="font-size:18px">'+fmtDur(totalT)+'</div></div>'+
+    '</div>':'';
+  var recentHTML=state.walks.length>0?
+    '<div class="section-title">Recent walks</div>'+recent+
+    (state.walks.length>3?'<button class="btn btn-secondary btn-sm" onclick="renderHistory();show(\'history\')" style="margin-top:4px">See all '+state.walks.length+' walks</button>':''):'';
+  var installNote=!isStandalone?
+    '<div class="install-banner"><b>📌 Install for offline use</b>Tap the Share button in Safari → "Add to Home Screen" so this works without internet.</div>':'';
+
+  document.getElementById('screen-home').innerHTML=
+    '<div class="header">'+
+      '<span class="header-title">Walk Tracker</span>'+
+      (state.walks.length>0?'<button class="btn btn-secondary btn-sm" onclick="renderHistory();show(\'history\')">History</button>':'<span></span>')+
+    '</div>'+
+    installNote+
+    totalsHTML+
+    '<div class="hero-box">'+
+      '<div class="hero-icon">📍</div>'+
+      '<div class="hero-title">Ready to walk?</div>'+
+      '<div class="hero-sub">Your route will be mapped in real time using GPS.</div>'+
+    '</div>'+
+    '<button class="btn btn-primary" onclick="beginWalk()">▶ Start walk</button>'+
+    (recentHTML?'<div style="margin-top:20px">'+recentHTML+'</div>':'');
+  show('home');
+}
+
+function renderTracking(){
+  document.getElementById('screen-tracking').innerHTML=
+    '<div class="status-bar">'+
+      '<span id="status-text"><span class="status-dot"></span> Acquiring GPS…</span>'+
+      '<span class="timer" id="timer-display">0:00</span>'+
+    '</div>'+
+    '<div class="error-box" id="gps-error" style="display:none"></div>'+
+    '<div id="map-container" style="height:260px;border-radius:12px;overflow:hidden;border:1px solid var(--border)">'+
+      '<div class="map-placeholder"><span>🗺</span>Waiting for GPS…</div>'+
+    '</div>'+
+    '<div class="stat-grid">'+
+      '<div class="stat-card"><div class="stat-label">Distance</div><div class="stat-value" id="stat-dist">0 m</div></div>'+
+      '<div class="stat-card"><div class="stat-label">Pace</div><div class="stat-value" id="stat-pace">--:--</div><div class="stat-sub">min/mi</div></div>'+
+      '<div class="stat-card"><div class="stat-label">Speed</div><div class="stat-value" id="stat-speed">0.0 mph</div></div>'+
+      '<div class="stat-card"><div class="stat-label">Steps est.</div><div class="stat-value" id="stat-steps">0</div></div>'+
+    '</div>'+
+    '<div class="btn-row">'+
+      '<button class="btn btn-secondary" id="pause-btn" onclick="togglePause()">Pause</button>'+
+      '<button class="btn btn-primary" onclick="finishWalk()">Finish walk</button>'+
+    '</div>';
+  show('tracking');
+  // init canvas map
+  setTimeout(function(){
+    var container=document.getElementById('map-container');
+    container.innerHTML='';
+    var canvas=document.createElement('canvas');
+    var w=container.offsetWidth||320,h=260;
+    canvas.width=w;canvas.height=h;
+    canvas.style.width='100%';canvas.style.height='100%';
+    container.appendChild(canvas);
+    var m={canvas:canvas,ctx:canvas.getContext('2d'),w:w,h:h,zoom:16,centerLat:41.563,centerLon:-87.538,coords:[]};
+    maps['map-tracking']=m;
+    renderMap('map-tracking');
+    // get initial position to center map
+    navigator.geolocation&&navigator.geolocation.getCurrentPosition(function(pos){
+      m.centerLat=pos.coords.latitude;m.centerLon=pos.coords.longitude;
+      renderMap('map-tracking');
+    },{},{enableHighAccuracy:true,timeout:10000});
+  },80);
+}
+
+function renderSummaryScreen(walk){
+  document.getElementById('screen-summary').innerHTML=
+    '<div class="header">'+
+      '<span><div style="font-size:18px;font-weight:600">Walk complete</div>'+
+      '<div style="font-size:13px;color:var(--text2);margin-top:2px">'+walk.date+' · '+walk.time+'</div></span>'+
+      '<button class="btn btn-secondary btn-sm" onclick="renderHome()">Done</button>'+
+    '</div>'+
+    '<div id="map-summary" style="height:260px;border-radius:12px;overflow:hidden;border:1px solid var(--border)"></div>'+
+    '<div class="stat-grid">'+
+      '<div class="stat-card"><div class="stat-label">Distance</div><div class="stat-value">'+fmtDist(walk.distance)+'</div></div>'+
+      '<div class="stat-card"><div class="stat-label">Duration</div><div class="stat-value">'+fmtDur(walk.duration)+'</div></div>'+
+      '<div class="stat-card"><div class="stat-label">Avg pace</div><div class="stat-value">'+fmtPace(walk.avgSpeed)+'</div><div class="stat-sub">min/mi</div></div>'+
+      '<div class="stat-card"><div class="stat-label">Steps est.</div><div class="stat-value">'+Math.round(walk.distance/0.78).toLocaleString()+'</div></div>'+
+    '</div>'+
+    '<button class="btn btn-primary" onclick="beginWalk()" style="margin-top:8px">▶ Start another walk</button>';
+  show('summary');
+  setTimeout(function(){
+    createMap('map-summary');
+    fitBounds('map-summary',walk.coords);
+  },80);
+}
+
+function exportCSV(){
+  if(state.walks.length===0)return;
+  var rows=['Date,Time,Distance (mi),Duration,Avg Pace (min/mi),Steps Est.'];
+  state.walks.forEach(function(w){
+    var mi=(w.distance*3.28084/5280).toFixed(3);
+    rows.push([w.date,w.time,mi,fmtDur(w.duration),fmtPace(w.avgSpeed),Math.round(w.distance/0.78)].join(','));
+  });
+  var blob=new Blob([rows.join('\n')],{type:'text/csv'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='walk-history.csv';a.click();
+}
+
+function deleteAllWalks(){
+  if(!confirm('Delete all '+state.walks.length+' walks? This cannot be undone.'))return;
+  state.walks=[];saveWalks();renderHistory();
+}
+
+function deleteWalk(id){
+  if(!confirm('Delete this walk?'))return;
+  state.walks=state.walks.filter(function(w){return String(w.id)!==String(id)});
+  saveWalks();renderHistory();show('history');
+}
+
+function renderHistory(){
+  var items=state.walks.map(function(w){
+    return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'+      '<button class="walk-item" style="flex:1;margin-bottom:0" onclick="openWalk(\''+w.id+'\')">'+        '<span class="walk-avatar">🚶</span>'+        '<span class="walk-info"><span class="walk-name">'+w.date+'</span><br><span class="walk-meta">'+w.time+' · '+fmtDur(w.duration)+'</span></span>'+        '<span class="walk-dist">'+fmtDist(w.distance)+'</span>'+      '</button>'+      '<button onclick="deleteWalk(\''+w.id+'\')" style="flex-shrink:0;width:40px;height:40px;border-radius:var(--radius-sm);border:1px solid #f5c4b3;background:#fff0ec;color:#993c1d;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">🗑</button>'+    '</div>';
+  }).join('');
+  var actionBar=state.walks.length>0?
+    '<div style="display:flex;gap:8px;margin-bottom:16px">'+      '<button class="btn btn-secondary" style="flex:1;padding:10px;font-size:13px" onclick="exportCSV()">⬇ Export CSV</button>'+      '<button class="btn" style="flex:1;padding:10px;font-size:13px;background:#fff0ec;color:#993c1d;border:1px solid #f5c4b3;border-radius:var(--radius-sm)" onclick="deleteAllWalks()">🗑 Delete all</button>'+    '</div>':'';
+  document.getElementById('screen-history').innerHTML=
+    '<div class="header">'+      '<span class="header-title">Walk history</span>'+      '<button class="back-btn" onclick="renderHome()">✕</button>'+    '</div>'+    actionBar+    (state.walks.length===0?
+      '<div style="text-align:center;padding:48px 16px;color:var(--text3);font-size:14px">No walks yet.<br>Start your first walk!</div>':
+      items);
+  show('history');
+}
+
+
+function openWalk(id){
+  var w=state.walks.find(function(x){return String(x.id)===String(id)});
+  if(!w)return;
+  state.selectedWalk=w;
+  document.getElementById('screen-detail').innerHTML=
+    '<div class="header">'+
+      '<button class="back-btn" onclick="renderHistory();show(\'history\')">\u2190</button>'+
+      '<span><div style="font-size:16px;font-weight:600">'+w.date+'</div><div style="font-size:12px;color:var(--text2)">'+w.time+'</div></span>'+
+      '<span></span>'+
+    '</div>'+
+    '<div id="map-detail" style="height:260px;border-radius:12px;overflow:hidden;border:1px solid var(--border)"></div>'+
+    '<div class="stat-grid">'+
+      '<div class="stat-card"><div class="stat-label">Distance</div><div class="stat-value">'+fmtDist(w.distance)+'</div></div>'+
+      '<div class="stat-card"><div class="stat-label">Duration</div><div class="stat-value">'+fmtDur(w.duration)+'</div></div>'+
+      '<div class="stat-card"><div class="stat-label">Avg pace</div><div class="stat-value">'+fmtPace(w.avgSpeed)+'</div><div class="stat-sub">min/mi</div></div>'+
+      '<div class="stat-card"><div class="stat-label">Steps est.</div><div class="stat-value">'+Math.round(w.distance/0.78).toLocaleString()+'</div></div>'+
+    '</div>'+
+    '<div style="display:flex;gap:8px;margin-top:8px">'+
+      '<button class="btn" style="flex:1;padding:12px;font-size:14px;background:#fff0ec;color:#993c1d;border:1px solid #f5c4b3" onclick="deleteWalk(\''+w.id+'\')">🗑 Delete this walk</button>'+
+      '<button class="btn" style="flex:1;padding:12px;font-size:14px;background:#fff0ec;color:#993c1d;border:1px solid #f5c4b3" onclick="deleteAllWalks()">🗑 Delete all</button>'+
+    '</div>';
+  show('detail');
+  setTimeout(function(){
+    createMap('map-detail');
+    fitBounds('map-detail',w.coords);
+  },80);
+}
+
+// ── Walk lifecycle ─────────────────────────────────────────
+function beginWalk(){
+  state.coords=[];state.distance=0;state.elapsed=0;state.speed=0;
+  state.isPaused=false;state.pausedMs=0;state.pauseStart=null;
+  delete maps['map-tracking'];
+  renderTracking();
+  state.startTime=Date.now();
+  startGPS();startTimer();
+  state.isTracking=true;
+}
+function togglePause(){
+  if(!state.isPaused){
+    state.isPaused=true;stopGPS();stopTimer();state.pauseStart=Date.now();
+    var btn=document.getElementById('pause-btn');
+    if(btn){btn.textContent='Resume';btn.className='btn btn-outline'}
+    var st=document.getElementById('status-text');
+    if(st)st.innerHTML='<span class="status-dot" style="background:#f0a500;animation:none"></span> Paused';
+  } else {
+    state.isPaused=false;
+    if(state.pauseStart)state.pausedMs+=Date.now()-state.pauseStart;
+    state.pauseStart=null;
+    startGPS();startTimer();
+    var btn=document.getElementById('pause-btn');
+    if(btn){btn.textContent='Pause';btn.className='btn btn-secondary'}
+    var st=document.getElementById('status-text');
+    if(st)st.innerHTML='<span class="status-dot"></span> Recording';
+  }
+}
+function finishWalk(){
+  stopGPS();stopTimer();
+  var walk={
+    id:Date.now(),
+    date:new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}),
+    time:new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}),
+    coords:state.coords.slice(),
+    distance:state.distance,duration:state.elapsed,
+    avgSpeed:state.elapsed>0?state.distance/state.elapsed:0
+  };
+  state.walks.unshift(walk);saveWalks();
+  state.isTracking=false;
+  delete maps['map-summary'];
+  renderSummaryScreen(walk);
+}
+
+// ── Service Worker for full offline ───────────────────────
+if('serviceWorker' in navigator){
+  var swCode=`
+self.addEventListener('install',e=>self.skipWaiting());
+self.addEventListener('activate',e=>clients.claim());
+self.addEventListener('fetch',function(e){
+  var url=e.request.url;
+  if(url.includes('tile.openstreetmap.org')){
+    e.respondWith(
+      caches.open('wt-tiles').then(function(cache){
+        return cache.match(e.request).then(function(cached){
+          if(cached)return cached;
+          return fetch(e.request).then(function(resp){
+            cache.put(e.request,resp.clone());
+            return resp;
+          }).catch(function(){return cached||new Response('',{status:503})});
+        });
+      })
+    );
+  } else {
+    e.respondWith(
+      caches.open('wt-app-v1').then(function(cache){
+        return cache.match(e.request).then(function(cached){
+          if(cached)return cached;
+          return fetch(e.request).then(function(resp){
+            cache.put(e.request,resp.clone());return resp;
+          }).catch(function(){return cached||new Response('Offline',{status:503})});
+        });
+      })
+    );
+  }
+});`;
+  var blob=new Blob([swCode],{type:'application/javascript'});
+  var swUrl=URL.createObjectURL(blob);
+  navigator.serviceWorker.register(swUrl,{scope:'./'}).catch(function(){});
+}
+
+// ── Boot ───────────────────────────────────────────────────
+renderHome();
+</script>
+</body>
+</html>

@@ -500,9 +500,14 @@ function exportCSV(){
   var rows=['Date,Time,Distance (mi),Duration,Avg Pace (min/mi),Steps Est.'];
   state.walks.forEach(function(w){
     var mi=(w.distance*3.28084/5280).toFixed(3);
-    rows.push([w.date,w.time,mi,fmtDur(w.duration),fmtPace(w.avgSpeed),Math.round(w.distance/0.78)].join(','));
+    // Wrap date, time, duration and pace in quotes to prevent Excel splitting on commas/colons
+    var date='"'+w.date+'"';
+    var time='"'+w.time+'"';
+    var dur='"'+fmtDur(w.duration)+'"';
+    var pace='"'+fmtPace(w.avgSpeed)+'"';
+    rows.push([date,time,mi,dur,pace,Math.round(w.distance/0.78)].join(','));
   });
-  var blob=new Blob([rows.join('\n')],{type:'text/csv'});
+  var blob=new Blob(['\uFEFF'+rows.join('\n')],{type:'text/csv;charset=utf-8'});
   var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='walk-history.csv';a.click();
 }
 

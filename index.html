@@ -75,6 +75,11 @@
   .section-title{font-size:13px;font-weight:500;color:var(--text2);margin:16px 0 8px;text-transform:uppercase;letter-spacing:.05em}
   .totals-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px}
 
+  .lock-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:white;text-align:center}
+  .lock-icon{font-size:64px;line-height:1}
+  .lock-msg{font-size:15px;opacity:.8;padding:0 32px}
+  .unlock-btn{margin-top:8px;padding:16px 48px;border-radius:50px;border:2px solid white;background:rgba(255,255,255,0.15);color:white;font-size:17px;font-weight:600;cursor:pointer}
+  .lock-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:13px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:15px;font-weight:500;cursor:pointer;margin-top:4px}
   .install-banner{background:#fff8e1;border:1px solid #ffe082;border-radius:var(--radius-sm);padding:12px 14px;font-size:13px;color:#7a5800;margin-bottom:16px;line-height:1.5}
   @media(prefers-color-scheme:dark){.install-banner{background:#2a1f00;border-color:#6b5000;color:#ffd54f}}
   .install-banner b{display:block;margin-bottom:4px}
@@ -451,7 +456,8 @@ function renderTracking(){
     '<div class="btn-row">'+
       '<button class="btn btn-secondary" id="pause-btn" onclick="togglePause()">Pause</button>'+
       '<button class="btn btn-primary" onclick="finishWalk()">Finish walk</button>'+
-    '</div>';
+    '</div>'+
+    '<button class="lock-btn" onclick="lockScreen()">🔒 Lock screen</button>';
   show('tracking');
   // init canvas map
   setTimeout(function(){
@@ -565,6 +571,24 @@ function openWalk(id){
 }
 
 // ── Walk lifecycle ─────────────────────────────────────────
+function lockScreen(){
+  var ov=document.createElement('div');
+  ov.className='lock-overlay';ov.id='lock-overlay';
+  ov.innerHTML='<div class="lock-icon">🔒</div>'+
+    '<div style="font-size:20px;font-weight:600">Screen locked</div>'+
+    '<div class="lock-msg">Buttons are disabled. Your walk is still tracking.</div>'+
+    '<button class="unlock-btn" onclick="unlockScreen()">Tap to unlock</button>';
+  document.body.appendChild(ov);
+  // keep screen awake hint
+  if('wakeLock' in navigator){
+    navigator.wakeLock.request('screen').catch(function(){});
+  }
+}
+function unlockScreen(){
+  var ov=document.getElementById('lock-overlay');
+  if(ov)ov.remove();
+}
+
 function beginWalk(){
   state.coords=[];state.distance=0;state.elapsed=0;state.speed=0;
   state.isPaused=false;state.pausedMs=0;state.pauseStart=null;
